@@ -538,6 +538,8 @@ inline IValue toIValue(
         return py::cast<double>(obj);
       }
     }
+    case TypeKind::PyObjectType:
+      return c10::ivalue::PyObjectHolder::create(obj.ptr());
     case TypeKind::GeneratorType:
     case TypeKind::VarType:
     case TypeKind::FutureType:

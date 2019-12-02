@@ -82,6 +82,14 @@ inline c10::intrusive_ptr<ivalue::Object> IValue::toObject() const & {
   AT_ASSERT(isObject(), "Expected Object but got ", tagKind());
   return toIntrusivePtr<ivalue::Object>();
 }
+inline c10::intrusive_ptr<ivalue::PyObjectHolder> IValue::toPyObjectHolder() && {
+  TORCH_INTERNAL_ASSERT(isPyObject(), "Expected PyObject but got", tagKind());
+  return moveToIntrusivePtr<ivalue::PyObjectHolder>();
+}
+inline c10::intrusive_ptr<ivalue::PyObjectHolder> IValue::toPyObjectHolder() const & {
+  TORCH_INTERNAL_ASSERT(isPyObject(), "Expected PyObject but got", tagKind());
+  return toIntrusivePtr<ivalue::PyObjectHolder>();
+}
 inline at::Tensor IValue::toTensor() && {
   AT_ASSERT(isTensor(), "Expected Tensor but got ", tagKind());
   return at::Tensor(moveToIntrusivePtr<at::TensorImpl, at::UndefinedTensorImpl>());
@@ -182,6 +190,7 @@ struct CAFFE2_API Tuple : c10::intrusive_ptr_target {
 };
 
 struct Object;
+struct PyObjectHolder;
 }
 
 // Future
@@ -388,6 +397,29 @@ struct C10_EXPORT ivalue::Object final : c10::intrusive_ptr_target {
   void resizeObject(size_t slot);
   StrongTypePtr type_;
   std::vector<IValue> slots_;
+};
+
+// ivalue Holder that hold a PyObject*
+struct C10_EXPORT ivalue::PyObjectHolder final : c10::intrusive_ptr_target {
+ private:
+  c10::intrusive_ptr<ivalue::PyObjectHolder> intrusive_from_this() {
+    c10::raw::intrusive_ptr::incref(this); // we are creating a new pointer
+                                           // from a raw `this` pointer
+                                           // so we need to bump the refcount
+                                           // to account for this ownership
+    return c10::intrusive_ptr<ivalue::PyObjectHolder>::reclaim(this);
+  }
+ public:
+  static c10::intrusive_ptr<ivalue::PyObjectHolder> create(PyObject* py_obj) {
+    return c10::make_intrusive<ivalue::PyObjectHolder>(py_obj);
+  }
+  PyObject* getPyObject() {
+    return py_obj_;
+  }
+
+  PyObjectHolder(PyObject* py_obj): py_obj_(py_obj) {}
+ private:
+    PyObject* py_obj_;
 };
 
 std::vector<std::pair<IValue, IValue>> iterationOrder(const c10::Dict<IValue, IValue>& dict);
@@ -749,6 +781,10 @@ inline IValue::IValue(c10::intrusive_ptr<ivalue::Object> v)
 : tag(Tag::Object), is_intrusive_ptr(true) {
   payload.as_intrusive_ptr = v.release();
 }
+inline IValue::IValue(c10::intrusive_ptr<ivalue::PyObjectHolder> v)
+: tag(Tag::PyObject), is_intrusive_ptr(true) {
+  payload.as_intrusive_ptr = v.release();
+}
 inline IValue::IValue(c10::intrusive_ptr<torch::jit::CustomClassHolder> v)
 : tag(Tag::Capsule), is_intrusive_ptr(true) {
   payload.as_intrusive_ptr = v.release();
@@ -762,6 +798,9 @@ inline const std::string& IValue::toStringRef() const {
   return toString()->string();
 }
 
+inline PyObject* IValue::toPyObject() const {
+  return toPyObjectHolder()->getPyObject();
+}
 template<typename T>
 inline optional<T> IValue::toOptional() {
   if (this->isNone()) {

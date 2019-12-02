@@ -994,6 +994,11 @@ void initJitScriptBindings(PyObject* module) {
         return StrongFunctionPtr(std::move(cu), fn);
       });
   m.def("_ivalue_tags_match", ivalue_tags_match);
+  m.def("_ivalue_debug_python_object", [](py::object py_obj) {
+    IValue pyobj_ivalue = toIValue(std::move(py_obj), PyObjectType::get());
+    py::handle ret = pyobj_ivalue.toPyObject();
+    return ret;
+  });
   m.def("_jit_debug_module_iterators", _jit_debug_module_iterators);
 
   py::class_<testing::FileCheck>(m, "FileCheck")

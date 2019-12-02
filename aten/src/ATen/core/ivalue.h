@@ -9,6 +9,7 @@
 namespace torch {
 namespace jit {
 class CustomClassHolder : public c10::intrusive_ptr_target {};
+
 struct Function;
 namespace script {
 struct CompilationUnit;
@@ -29,6 +30,7 @@ struct Future;
 struct ConstantString;
 struct GenericDict;
 struct Object;
+struct PyObjectHolder;
 }
 
 // IValue is the generic tagged union used by the interpreter to hold
@@ -56,6 +58,7 @@ struct Object;
   _(Future) \
   _(Device) \
   _(Object) \
+  _(PyObject) \
   _(Uninitialized) \
   _(Capsule)
 
@@ -329,6 +332,13 @@ struct CAFFE2_API IValue final {
 
   torch::jit::script::Module toModule() const;
   bool isModule() const;
+
+  // PyObject
+  IValue(c10::intrusive_ptr<ivalue::PyObjectHolder> v);
+  bool isPyObject() const { return tag == Tag::PyObject; }
+  c10::intrusive_ptr<ivalue::PyObjectHolder> toPyObjectHolder() &&;
+  c10::intrusive_ptr<ivalue::PyObjectHolder> toPyObjectHolder() const &;
+  PyObject* toPyObject() const;
 
   // None
   bool isNone() const {
