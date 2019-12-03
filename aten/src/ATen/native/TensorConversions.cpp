@@ -45,7 +45,7 @@ static inline Tensor to_impl(const Tensor& self, const TensorOptions& options, b
   return r;
 }
 
-Tensor to(const Tensor& self, ScalarType dtype, Layout layout, Device device, bool pin_memory, bool non_blocking, bool copy, c10::optional<c10::MemoryFormat> optional_memory_format) {
+Tensor to(const Tensor& self, c10::optional<ScalarType> dtype, c10::optional<Layout> layout, c10::optional<Device> device, c10::optional<bool> pin_memory, bool non_blocking, bool copy, c10::optional<c10::MemoryFormat> optional_memory_format) {
   // [CHECK THIS]
   /*
   TORCH_CHECK(options.requires_grad_opt() == c10::nullopt,
@@ -58,10 +58,16 @@ Tensor to(const Tensor& self, ScalarType dtype, Layout layout, Device device, bo
            "but got self.layout being ", self.layout(),
            " and options.layout set as ", options.layout());
   */
+  if (device.has_value()) {
+    device = ensure_has_index(device.value());
+  }
   auto specified_options = self.options();
-  auto device_opt = ensure_has_index(device);
-  specified_options = specified_options.device(device);
-  specified_options = specified_options.dtype(dtype);
+  if (device.has_value()) {
+    specified_options = specified_options.device(device.value());
+  }
+  if (dtype.has_value()) {
+    specified_options = specified_options.dtype(dtype.value());
+  }
   
   return to_impl(self, specified_options, non_blocking, copy, optional_memory_format);
 }

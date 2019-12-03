@@ -97,7 +97,7 @@ ${return_type} ${api_name}(${type_method_formals}) const;
 """)
 
 NATIVE_DISPATCH_DECLARATION_UNDERSCORE = CodeTemplate("""\
-${return_type} _${api_name}(${type_method_formals});
+${return_type} _${api_name}(${type_method_formals}); 
 """)
 
 NATIVE_DISPATCH_DEFINITION_DEFAULT = CodeTemplate("""\
@@ -307,13 +307,34 @@ static inline ${return_type} _${api_name}(${formals}) {
 
 
 COLLAPSED_FACTORY_DEFINITION = CodeTemplate("""\
-inline ${return_type} ${api_name}(${collapsed_formals}) {
+inline ${return_type} ${api_name}(${collapsed_formals}) { 
     return _${api_name}(${expanded_native_actuals});
 }
 """)
 
 COLLAPSED_METHOD_DEFINITION = CodeTemplate("""\
-inline ${return_type} Tensor::${api_name}(${collapsed_formals}) const {
+inline ${return_type} Tensor::${api_name}(${collapsed_formals}) const { 
+    c10::optional<ScalarType> dtype = c10::nullopt;
+    c10::optional<Layout> layout = c10::nullopt;
+    c10::optional<Device> device = c10::nullopt;
+    c10::optional<bool> pin_memory = c10::nullopt;
+
+    if (options.dtype_opt().has_value()) {
+        dtype = typeMetaToScalarType(options.dtype());
+    }
+
+    if (options.layout_opt().has_value()) {
+        layout = options.layout();
+    }
+    
+    if (options.device_opt().has_value()) {
+        device = options.device();
+    }
+
+    if (options.pinned_memory_opt().has_value()) {
+        pin_memory = options.pinned_memory();
+    }
+
     return _${api_name}(${expanded_native_actuals});
 }
 """)
@@ -1080,7 +1101,7 @@ def create_generic(top_env, declarations):
         if (any(formal == 'c10::optional<ScalarType> dtype=c10::nullopt' for formal in formals) and
             any(formal == 'c10::optional<Layout> layout=c10::nullopt' for formal in formals) and
             any(formal == 'c10::optional<Device> device=c10::nullopt' for formal in formals) and 
-            any(formal == 'c10::optional<bool> pin_memory=c10::nullopt' for formal in formals)):
+            (any(formal == 'c10::optional<bool> pin_memory=c10::nullopt' for formal in formals) or any(formal == 'c10::optional<bool> pin_memory=false' for formal in formals))):
             index = formals.index('c10::optional<ScalarType> dtype=c10::nullopt')
 
             collapsed.pop(index)
@@ -1392,7 +1413,7 @@ def create_generic(top_env, declarations):
 
             method_definition = C10_TENSOR_METHOD_DEFINITION
 
-            if check_if_factory_method(option['arguments']):
+            if check_if_factory_method(option['arguments']):  
                 return FunctionCode(
                 declaration=TENSOR_METHOD_DECLARATION_UNDERSCORE.substitute(
                     option, static_dispatch_method_body=static_dispatch_method_body),
@@ -1467,10 +1488,10 @@ def create_generic(top_env, declarations):
             expanded_native_actuals.remove('const_cast<Tensor&>(*this)')
             index = expanded_native_actuals.index('options')
             expanded_native_actuals.remove('options')
-            expanded_native_actuals.insert(index, 'options.pinned_memory()')
-            expanded_native_actuals.insert(index, 'options.device()')
-            expanded_native_actuals.insert(index, 'options.layout()')
-            expanded_native_actuals.insert(index, 'typeMetaToScalarType(options.dtype())')
+            expanded_native_actuals.insert(index, 'pin_memory')
+            expanded_native_actuals.insert(index, 'device')
+            expanded_native_actuals.insert(index, 'layout')
+            expanded_native_actuals.insert(index, 'dtype')
 
             fn_definition = COLLAPSED_METHOD_DEFINITION.substitute(option, collapsed_formals = collapse_formals(option['method_formals']), expanded_native_actuals=expanded_native_actuals)
             return FunctionCode(definition=fn_definition, declaration=fn_declaration)
@@ -1612,7 +1633,7 @@ def create_generic(top_env, declarations):
 
                 top_env['function_definitions'].append(collapsed_code.definition)
                 top_env['function_declarations'].append(collapsed_code.declaration)
-        
+    
         if not BUILD_NAMEDTENSOR and is_named_tensor_only:
             return None
         return OutputDeclaration(

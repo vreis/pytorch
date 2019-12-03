@@ -793,7 +793,12 @@ Tensor triu_indices_cpu(
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ zeros ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Tensor zeros(IntArrayRef size, c10::optional<ScalarType> dtype, c10::optional<Layout> layout, c10::optional<Device> device, c10::optional<bool> pin_memory) {
-  auto result = at::_empty(size, dtype, layout, device, pin_memory);
+  const auto options = TensorOptions()
+        .dtype(dtype)
+        .layout(layout)
+        .device(device)
+        .pinned_memory(pin_memory);
+  auto result = at::empty(size, options);
   return result.zero_();
 }
 
