@@ -220,7 +220,7 @@ def should_generate_python_binding(declaration):
     return True
 
 def collapse_actuals(actuals):
-    collapsed = actuals.copy()
+    collapsed = actuals[:]
     if (any(actual == 'dtype' for actual in actuals) and
         any(actual == 'layout' for actual in actuals) and
         any(actual == 'device' for actual in actuals) and 
@@ -873,9 +873,6 @@ def create_python_bindings(python_functions, has_self, is_module=False):
         env['dispatch'].append('}')
         env['traceable'] = 'true' if all(should_trace(d) for d in declarations) else 'false'
 
-        if name == '_empty_affine_quantized':
-            print("\n\n\n FOO: ", env['dispatch'])
-
         if len(declarations) == 1 and len(declarations[0]['args']) == 1 and has_self:
             tmpl = PY_VARIABLE_METHOD_NOARGS
             env['actuals'] = ['self']
@@ -1039,9 +1036,6 @@ def get_python_signature(declaration, include_out):
             param += '=' + str(default)
         return param
 
-    if declaration['name'] == 'bartlett_window' or declaration['name'] == 'bartlett_window.periodic':
-        print('declaration[arguments]: ', declaration['arguments'])
-
     for arg in declaration['arguments']:
         if arg.get('output', False):
             output_args.append(arg)
@@ -1066,11 +1060,6 @@ def get_python_signature(declaration, include_out):
             positional = False
         param = get_py_formal_arg(arg)
         py_formal_args.append(param)
-
-    if declaration['name'] == 'bartlett_window' or declaration['name'] == 'bartlett_window.periodic':
-        print('py_formal_args: ', py_formal_args)
-        print('output_args: ', output_args)
-        print('type_args: ', type_args)
 
     # add output arguments
     name = declaration['name']
@@ -1114,17 +1103,8 @@ def get_python_signature(declaration, include_out):
                 positional = False
             py_formal_args.append(get_py_formal_arg(arg))
 
-
-    if declaration['name'] == 'bartlett_window' or declaration['name'] == 'bartlett_window.periodic':
-        print('\n\n FINAL')
-        print('py_formal_args: ', py_formal_args)
-        print('output_args: ', output_args)
-        print('type_args: ', type_args)
-
     # Python function signature.
     # This is the string that we give to FunctionParameter, which is
     # then parsed into the actual structure which we do parsing
     # with.
-    if declaration['name'] == 'bartlett_window' or declaration['name'] == 'bartlett_window.periodic':
-        print("res: ", PYTHON_FUNCTION_SIGNATURE.substitute(name=name, py_formal_args=py_formal_args))
     return PYTHON_FUNCTION_SIGNATURE.substitute(name=name, py_formal_args=py_formal_args)

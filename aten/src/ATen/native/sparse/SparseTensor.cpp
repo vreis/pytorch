@@ -131,7 +131,7 @@ SparseTensor new_with_dims_and_tensor_sparse(
 
 /** Empty init **/
 Tensor empty_sparse(IntArrayRef size, c10::optional<ScalarType> dtype, c10::optional<Layout> layout, c10::optional<Device> device, c10::optional<bool> pin_memory, c10::optional<MemoryFormat> optional_memory_format) {
-  TORCH_CHECK(!pin_memory, "Only dense CPU tensors can be pinned");
+  TORCH_CHECK(pin_memory.has_value() && !pin_memory.value(), "Only dense CPU tensors can be pinned2");
   return new_with_dims_sparse(size.size(), 0, size, dtype.value(), layout.value(), device.value(), pin_memory.value());
 }
 

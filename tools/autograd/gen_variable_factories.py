@@ -84,7 +84,7 @@ def gen_variable_factories(out, declarations, template_path, disable_autograd=Fa
           {"function_definitions": function_definitions})
 
 def collapse_formals(formals):
-        collapsed = formals.copy()
+        collapsed = formals[:]
         if (any(formal == 'c10::optional<ScalarType> dtype' for formal in formals) and
             any(formal == 'c10::optional<Layout> layout' for formal in formals) and
             any(formal == 'c10::optional<Device> device' for formal in formals) and 
@@ -127,7 +127,7 @@ def collapse_formals(formals):
         return collapsed
 
 def collapse_actuals(actuals):
-    collapsed = actuals.copy()
+    collapsed = actuals[:]
     index = actuals.index('dtype')
     collapsed[index] = 'at::typeMetaToScalarType(options.dtype())'
     collapsed[index + 1] = 'options.layout()'
@@ -136,7 +136,7 @@ def collapse_actuals(actuals):
     return collapsed
 
 def replace_dtype_nullprt(actuals):
-    replaced = actuals.copy()
+    replaced = actuals[:]
     index = actuals.index('at::typeMetaToScalarType(options.dtype())')
     replaced[index] = 'c10::nullopt'
     return replaced

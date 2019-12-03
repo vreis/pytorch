@@ -1064,7 +1064,7 @@ def create_generic(top_env, declarations):
         return broadcast_actuals
 
     def collapse_actuals(actuals):
-        collapsed = actuals.copy()
+        collapsed = actuals[:]
         if (any(actual == 'dtype' for actual in actuals) and
             any(actual == 'layout' for actual in actuals) and
             any(actual == 'device' for actual in actuals) and 
@@ -1085,7 +1085,7 @@ def create_generic(top_env, declarations):
         return collapsed
 
     def collapse_formals(formals):
-        collapsed = formals.copy()
+        collapsed = formals[:]
         if (any(formal == 'c10::optional<ScalarType> dtype' for formal in formals) and
             any(formal == 'c10::optional<Layout> layout' for formal in formals) and
             any(formal == 'c10::optional<Device> device' for formal in formals) and 
@@ -1125,7 +1125,7 @@ def create_generic(top_env, declarations):
         return collapsed
 
     def collapse_formals_list(formals):
-        collapsed = formals.copy()
+        collapsed = formals[:]
         if (any(formal['type'] == 'c10::optional<ScalarType>' for formal in collapsed) and 
             any(formal['type'] == 'c10::optional<Layout>' for formal in collapsed) and 
             any(formal['type'] == 'c10::optional<Device>' for formal in collapsed) and 
@@ -1469,7 +1469,7 @@ def create_generic(top_env, declarations):
             declaration = DEPRECATED_COLLAPSED_FUNCTION_DECLARATION if option['deprecated'] else COLLAPSED_FUNCTION_DECLARATION
             fn_declaration = declaration.substitute(option)
 
-            expanded_native_actuals = option['collapsed_native_actuals'].copy()
+            expanded_native_actuals = option['collapsed_native_actuals'][:]
             index = expanded_native_actuals.index('options')
             expanded_native_actuals.remove('options')
             expanded_native_actuals.insert(index, 'options.pinned_memory()')
@@ -1484,7 +1484,7 @@ def create_generic(top_env, declarations):
             declaration = NATIVE_DISPATCH_DECLARATION_CONST
             fn_declaration = declaration.substitute(option, type_method_formals=collapse_formals(option['method_formals_with_defaults']))
 
-            expanded_native_actuals = option['collapsed_method_actuals'].copy()
+            expanded_native_actuals = option['collapsed_method_actuals'][:]
             expanded_native_actuals.remove('const_cast<Tensor&>(*this)')
             index = expanded_native_actuals.index('options')
             expanded_native_actuals.remove('options')
@@ -1609,7 +1609,6 @@ def create_generic(top_env, declarations):
             method_of.append('Tensor')
             
             if is_factory_method:
-                print("\n\n option: ", option['name'])
                 code = gen_namespace_collapsed_function2(option)
                 top_env['tensor_method_declarations'].append(code.declaration)
                 top_env['tensor_method_definitions'].append(code.definition)
