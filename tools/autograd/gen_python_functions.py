@@ -8,6 +8,7 @@ import re
 from .nested_dict import nested_dict
 from .gen_variable_type import should_trace
 from .utils import write
+from tools import tensor_options_utils as TOUtils
 
 try:
     from src.ATen.code_template import CodeTemplate
@@ -197,14 +198,6 @@ const auto options = TensorOptions()
     .pinned_memory(${pin_memory});
 """)
 
-
-def hasTO(inputs):
-    a = any(arg['type'] == 'c10::optional<at::ScalarType>' for arg in inputs) and any(arg['type'] == 'c10::optional<at::Layout>' for arg in inputs) and any(arg['type'] == 'c10::optional<at::Device>' for arg in inputs) and any(arg['type'] == 'c10::optional<bool>' for arg in inputs)
-    a1 = any(arg['type'] == 'c10::optional<ScalarType>' for arg in inputs) and any(arg['type'] == 'c10::optional<Layout>' for arg in inputs) and any(arg['type'] == 'c10::optional<Device>' for arg in inputs) and any(arg['type'] == 'c10::optional<bool>' for arg in inputs)
-    b = any(arg['type'] == 'ScalarType' for arg in inputs) and any(arg['type'] == 'Layout' for arg in inputs) and any(arg['type'] == 'Device' for arg in inputs) and any(arg['type'] == 'bool' for arg in inputs)
-    return a or a1 or b
-
-
 def should_generate_python_binding(declaration):
     name = declaration['name']
     for pattern in SKIP_PYTHON_BINDINGS:
@@ -218,27 +211,6 @@ def should_generate_python_binding(declaration):
             return False
 
     return True
-
-def collapse_actuals(actuals):
-    collapsed = actuals[:]
-    if (any(actual == 'dtype' for actual in actuals) and
-        any(actual == 'layout' for actual in actuals) and
-        any(actual == 'device' for actual in actuals) and 
-        any(actual == 'pin_memory' for actual in actuals)):
-        index = 0
-        for i in range(len(collapsed)):
-            if collapsed[index] == 'dtype':
-                break
-            else:
-                index += 1
-    
-        collapsed.pop(index)
-        collapsed.pop(index)
-        collapsed.pop(index)
-        collapsed.pop(index)
-        collapsed.insert(index, 'options')
-    
-    return collapsed
 
 def get_py_variable_methods(declarations):
     """
@@ -310,7 +282,6 @@ def gen_py_torch_functions(out, declarations, template_path):
 
     py_torch_functions = get_py_torch_functions(declarations)
     env = create_python_bindings(py_torch_functions, has_self=False)
-
     write(out, 'python_torch_functions.cpp', PY_TORCH_FUNCTIONS_CPP, env)
     write(out, 'python_torch_functions_dispatch.h', PY_TORCH_DISPATCH_H, env)
 
@@ -392,22 +363,9 @@ def create_python_bindings(python_functions, has_self, is_module=False):
         def is_output(arg):
             return arg.get('output', False)
 
-        inputs = [arg for arg in declaration['arguments'] if not is_output(arg)]       
-        #if hasTO(declaration['arguments']) and False:
-        #    i = 0
-        #    dtypeIndex = 0
-        #    for inp in inputs:
-        #        if inp['name'] == 'dtype':
-        #            dtypeIndex = i
-        #        else:
-        #            i += 1
-        #        
-        #        if inp['name'] == 'memory_format':
-        #            inputs.remove(inp)
-        #            inputs.insert(dtypeIndex, inp)
-
+        inputs = [arg for arg in declaration['arguments'] if not is_output(arg)]
         outputs = [arg for arg in declaration['arguments'] if is_output(arg)]
-        has_tensor_options = hasTO(declaration['arguments'])
+        has_tensor_options = TOUtils.check_if_factory_method(declaration['arguments'])
 
         def get_type_args(args):
             return [arg for arg in args if arg['simple_type'] == 'Type']
@@ -476,10 +434,8 @@ def create_python_bindings(python_functions, has_self, is_module=False):
             actuals.append(actual)
             formal_args.append(formal)
 
-        #arg_idx = arg_idx if out_idx is None else out_idx #+ 1
         # We always want to unpack when we have TensorOptions.
         unpack = has_tensor_options
-
         for arg in inputs:
             if out_idx is not None and arg_idx == out_idx:
                 #skip output
@@ -540,7 +496,6 @@ def create_python_bindings(python_functions, has_self, is_module=False):
         if 'dtype' in (a['name'] for a in python_binding_arguments):
             if not has_tensor_options:
                 arg_idx += 1
-
 
         if 'layout' in (a['name'] for a in python_binding_arguments):
             layout_idx, device_idx, pin_memory_idx, requires_grad_idx = (arg_idx, arg_idx + 1, arg_idx + 2, arg_idx + 3)
@@ -613,7 +568,7 @@ def create_python_bindings(python_functions, has_self, is_module=False):
         
         if has_tensor_options:
             env['initialize_cuda'] = 'torch::utils::maybe_initialize_cuda(options);'
-            env['dispatch_args'] = collapse_actuals(env['dispatch_args'])
+            env['dispatch_args'] = TOUtils.collapse_actuals(env['dispatch_args'])
             if requires_grad_needed:
                 env['tensor_options'] = "const auto options = TensorOptions().dtype(dtype).device(device).layout(layout).pinned_memory(pin_memory).requires_grad(requires_grad);"
             else:
@@ -722,9 +677,7 @@ def create_python_bindings(python_functions, has_self, is_module=False):
                 has_tensor_input_arg = True
             if arg['simple_type'] == 'Type':
                 has_type_input_arg = True
-            #elif arg['simple_type'] == 'TensorOptions':
-            #    has_options_arg = True
-            if hasTO(declaration['arguments']):
+            if TOUtils.check_if_factory_method(declaration['arguments']):
                 has_options_arg = True
             if arg['name'] == 'requires_grad':
                 raise ValueError("argument named requires_grad not supported")
@@ -1045,7 +998,7 @@ def get_python_signature(declaration, include_out):
             continue
         # Skip `TensorOptions` in Python, as it is only used on the C++ side.
         # TODO: [CHECK THIS] : if 2 scalar types are passed - we have an issue
-        if hasTO(declaration['arguments']):
+        if TOUtils.check_if_factory_method(declaration['arguments']):
             if arg['name'] == 'dtype':
                 continue
             if arg['name'] == 'layout':

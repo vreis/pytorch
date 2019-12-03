@@ -20,6 +20,7 @@ from itertools import groupby
 from ..autograd.utils import CodeTemplate, YamlLoader, write
 from ..autograd.gen_autograd import load_aten_declarations
 from ..autograd.gen_autograd import RETURNS_VIEWS_OF_INPUT
+from tools import tensor_options_utils as TOUtils
 
 # JIT has a type system of
 # Scalar = int | float | bool # int is the largest int (int64_t),
@@ -240,16 +241,6 @@ def is_view(decl):
 def is_out_variant(decl):
     return decl['name'].endswith('_out')
 
-def check_if_factory_method(args):
-    for arg in args: 
-        if 'type' not in arg:
-            return False
-
-    a = any(arg['type'] == 'c10::optional<ScalarType>' for arg in args) and any(arg['type'] == 'c10::optional<Layout>' for arg in args) and any(arg['type'] == 'c10::optional<Device>' for arg in args) and any(arg['type'] == 'c10::optional<bool>' for arg in args)
-    c = any(arg['type'] == 'ScalarType' for arg in args) and any(arg['type'] == 'Layout' for arg in args) and any(arg['type'] == 'Device' for arg in args) and any(arg['type'] == 'bool' for arg in args)
-    b = any('TensorOptions' in arg['type'] for arg in args)
-    return a or b or c
-
 # Copied from ..autograd.gen_python_functions.SKIP_PYTHON_BINDINGS
 BACKWARD_OP_PATTERNS = [
     '.*_backward',
@@ -291,7 +282,7 @@ def gen_jit_dispatch(declarations, out, template_path, disable_autograd=False, s
             return ',\n'.join(args)
         is_namespace_function = 'namespace' in decl['method_of']
         
-        if check_if_factory_method(decl['arguments']):
+        if TOUtils.check_if_factory_method(decl['arguments']):
             if 'ScalarType dtype' in decl['formals']:
                 tensor_options_arg_index = decl['formals'].index('ScalarType dtype')
             if 'c10::optional<ScalarType> dtype' in decl['formals']:
