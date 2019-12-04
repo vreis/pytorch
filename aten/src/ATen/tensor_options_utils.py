@@ -39,64 +39,58 @@ def collapse_actuals(actuals):
 
         return collapsed
 
-def collapse_formals2(formals):
-        collapsed = formals[:]
-        if ((any(formal == 'c10::optional<ScalarType> dtype = c10::nullopt' for formal in formals) or any(formal == 'c10::optional<ScalarType> dtype = at::kLong' for formal in formals)) and
-            any(formal == 'c10::optional<Layout> layout = c10::nullopt' for formal in formals) and
-            any(formal == 'c10::optional<Device> device = c10::nullopt' for formal in formals) and 
-            any(formal == 'c10::optional<bool> pin_memory = c10::nullopt' for formal in formals)):
-            if 'c10::optional<ScalarType> dtype = c10::nullopt' in formals:
-                index = formals.index('c10::optional<ScalarType> dtype = c10::nullopt')
-            else:
-                index = formals.index('c10::optional<ScalarType> dtype = at::kLong')
-
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.insert(index, 'const at::TensorOptions & options={}')
-
-        if (any(formal == 'at::ScalarType dtype' for formal in formals) and
-            any(formal == 'at::Layout layout' for formal in formals) and
-            any(formal == 'at::Device device' for formal in formals) and 
-            (any(formal == 'bool pin_memory' for formal in formals) or any(formal == 'bool pin_memory = false' for formal in formals))):
-            index = formals.index('at::ScalarType dtype')
-
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.insert(index, 'const at::TensorOptions & options')
-        
-        return collapsed
+tensor_options_optional_types = ['c10::optional<ScalarType> dtype', 'c10::optional<Layout> layout', 'c10::optional<Device> device', 'c10::optional<bool> pin_memory']
+tensor_options_types_and_var = ['ScalarType dtype', 'Layout layout', 'Device device', 'bool pin_memory']
 
 def collapse_formals(formals):
-        collapsed = formals[:]
-        if (any(formal == 'c10::optional<ScalarType> dtype' for formal in formals) and
-            any(formal == 'c10::optional<Layout> layout' for formal in formals) and
-            any(formal == 'c10::optional<Device> device' for formal in formals) and 
-            any(formal == 'c10::optional<bool> pin_memory' for formal in formals)):
-            index = formals.index('c10::optional<ScalarType> dtype')
+    collapsed = formals[:]
 
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.insert(index, 'const TensorOptions & options /*[CHECK THIS] should have ={}*/')
+    hasTO = True
+    hasDefVal = False
+    for option in tensor_options_optional_types:
+        if not any(option in formal for formal in formals):
+            hasTO = False
+            break
 
-        if (any(formal == 'c10::optional<ScalarType> dtype=c10::nullopt' for formal in formals) and
-            any(formal == 'c10::optional<Layout> layout=c10::nullopt' for formal in formals) and
-            any(formal == 'c10::optional<Device> device=c10::nullopt' for formal in formals) and 
-            (any(formal == 'c10::optional<bool> pin_memory=c10::nullopt' for formal in formals) or any(formal == 'c10::optional<bool> pin_memory=false' for formal in formals))):
-            index = formals.index('c10::optional<ScalarType> dtype=c10::nullopt')
+        if any((option in formal and '=' in formal) for formal in formals) :
+            hasDefVal = True
 
+        if hasTO:
+            index = [idx for idx, formal in enumerate(formals) if 'c10::optional<ScalarType> dtype' in formal][0]
             collapsed.pop(index)
             collapsed.pop(index)
             collapsed.pop(index)
             collapsed.pop(index)
-            collapsed.insert(index, 'const TensorOptions & options={}')
+            if hasDefVal:
+                collapsed.insert(index, 'const at::TensorOptions & options={}')
+            else:
+                collapsed.insert(index, 'const at::TensorOptions & options')
 
-        return collapsed
+            return collapsed
+
+    hasTO = True
+    for option in tensor_options_types_and_var:
+        if not any(option in formal for formal in formals):
+            hasTO = False
+            break
+
+        if any((option in formal and '=' in formal) for formal in formals) :
+            hasDefVal = True
+
+        if hasTO:
+            index = [idx for idx, formal in enumerate(formals) if 'ScalarType dtype' in formal][0]
+            collapsed.pop(index)
+            collapsed.pop(index)
+            collapsed.pop(index)
+            collapsed.pop(index)
+            if hasDefVal:
+                collapsed.insert(index, 'const at::TensorOptions & options={}')
+            else:
+                collapsed.insert(index, 'const at::TensorOptions & options')
+
+            return collapsed
+
+    return collapsed
 
 def collapse_formals_list(formals):
         collapsed = formals[:]

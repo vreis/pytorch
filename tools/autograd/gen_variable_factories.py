@@ -136,7 +136,7 @@ def process_function(decl, has_tensor_options, disable_autograd):
         )
     else:
         uncollapsed_actuals = TOUtils.collapse_actuals2(actuals)
-        collapsed_formals = TOUtils.collapse_formals2(formals)
+        collapsed_formals = TOUtils.collapse_formals(formals)
         uncollapsed_actuals_nullptr = replace_dtype_nullprt(uncollapsed_actuals)
 
         if decl['name'] == 'arange':
