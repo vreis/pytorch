@@ -8,7 +8,7 @@ import re
 from .nested_dict import nested_dict
 from .gen_variable_type import should_trace
 from .utils import write
-from tools.tensor_options_utils import *
+from .tensor_options_utils import *
 
 try:
     from src.ATen.code_template import CodeTemplate

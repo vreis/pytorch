@@ -3,7 +3,7 @@
 
 import re
 from code_template import CodeTemplate
-from tools.tensor_options_utils import *
+from tensor_options_utils import *
 
 try:
     import typing  # noqa: F401

@@ -20,7 +20,7 @@ import yaml
 import argparse
 import os
 from copy import deepcopy
-from tools.tensor_options_utils import *
+from tensor_options_utils import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--template_dir", default=".", help="where template.h is")

@@ -6,7 +6,7 @@ import re
 
 from .utils import CodeTemplate, write
 from .gen_variable_type import format_trace
-from tools.tensor_options_utils import *
+from .tensor_options_utils import *
 
 # [CHECK THIS] this is a hack. should be fixed later on
 FUNCTION_TEMPLATE_ARANGE = CodeTemplate("""\
