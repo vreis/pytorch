@@ -80,9 +80,11 @@ Tensor arange(
     c10::optional<c10::Layout> layout, 
     c10::optional<c10::Device> device, 
     c10::optional<bool> pin_memory) {
+  TensorOptions options = TensorOptions().dtype(dtype).layout(layout).device(device).pinned_memory(pin_memory);
   bool set_to_integral_dtype = !dtype.has_value() && allIntegral({start, end, step});
-  Tensor result = set_to_integral_dtype 
-      ?  at::_empty({0}, at::ScalarType::Long, layout, device, pin_memory) : at::_empty({0}, dtype, layout, device, pin_memory);  // to be filled by arange_out
+  Tensor result = set_to_integral_dtype
+      ? at::empty({0}, options.dtype(at::ScalarType::Long))
+      : at::empty({0}, options);
   return at::arange_out(result, start, end, step);
 }
 
