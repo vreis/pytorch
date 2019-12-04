@@ -1,8 +1,9 @@
 # HEY! Trying to understand what this file does?  Read
 # "what has to be done to add a Operation ..." first!
+
 import re
 from code_template import CodeTemplate
-from tensor_options_utils import *
+from tools.tensor_options_utils import *
 
 try:
     import typing  # noqa: F401
