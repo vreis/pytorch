@@ -20,7 +20,7 @@ import yaml
 import argparse
 import os
 from copy import deepcopy
-from tools import tensor_options_utils as TOUtils
+from tools.tensor_options_utils import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--template_dir", default=".", help="where template.h is")
@@ -201,7 +201,7 @@ def get_num_inputs(o):
 def find_factory_methods(decls):
     factory_methods = {}
     for o in decls:
-        if TOUtils.check_if_factory_method(o['arguments']):
+        if check_if_factory_method(o['arguments']):
             factory_methods[o['name']] = 0
     return factory_methods
 

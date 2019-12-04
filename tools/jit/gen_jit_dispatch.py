@@ -20,7 +20,7 @@ from itertools import groupby
 from ..autograd.utils import CodeTemplate, YamlLoader, write
 from ..autograd.gen_autograd import load_aten_declarations
 from ..autograd.gen_autograd import RETURNS_VIEWS_OF_INPUT
-from tools import tensor_options_utils as TOUtils
+from tools.tensor_options_utils import *
 
 # JIT has a type system of
 # Scalar = int | float | bool # int is the largest int (int64_t),
@@ -282,7 +282,7 @@ def gen_jit_dispatch(declarations, out, template_path, disable_autograd=False, s
             return ',\n'.join(args)
         is_namespace_function = 'namespace' in decl['method_of']
         
-        if TOUtils.check_if_factory_method(decl['arguments']):
+        if check_if_factory_method(decl['arguments']):
             if 'ScalarType dtype' in decl['formals']:
                 tensor_options_arg_index = decl['formals'].index('ScalarType dtype')
             if 'c10::optional<ScalarType> dtype' in decl['formals']:

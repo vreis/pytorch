@@ -3,7 +3,7 @@
 
 import re
 from code_template import CodeTemplate
-from tools import tensor_options_utils as TOUtils
+from tools.tensor_options_utils import *
 
 try:
     import typing  # noqa: F401
@@ -976,7 +976,7 @@ def create_generic(top_env, declarations):
             if formal['dynamic_type'] in ['TensorList'] or is_any_tensor_type(formal):
                 r.append(formal['name'])
         
-        if TOUtils.check_if_factory_method(formals):
+        if check_if_factory_method(formals):
             r.append('dtype, device, layout, pin_memory')
         return r
 
@@ -1186,7 +1186,7 @@ def create_generic(top_env, declarations):
         option['formals'] = [format_formal(f) for f in formals]
         option['formals_with_defaults'] = [formal_with_default(f) for f in formals]
         
-        collapsed_formals = TOUtils.collapse_formals_list(formals)
+        collapsed_formals = collapse_formals_list(formals)
         option['collapsed_formals'] = [format_formal(f) for f in collapsed_formals]
         option['collapsed_formals_with_defaults'] = [formal_with_default(f) for f in collapsed_formals]
         
@@ -1213,7 +1213,7 @@ def create_generic(top_env, declarations):
         option['method_actuals'] = [
             f['name'] if f['name'] != 'self' else 'const_cast<Tensor&>(*this)' for f in formals]
 
-        option['collapsed_method_actuals'] = TOUtils.collapse_actuals(option['method_actuals'])
+        option['collapsed_method_actuals'] = collapse_actuals(option['method_actuals'])
         
         def find_formal(formal_name, formals):
             for formal in formals:
@@ -1269,7 +1269,7 @@ def create_generic(top_env, declarations):
 
             method_definition = C10_TENSOR_METHOD_DEFINITION
 
-            if TOUtils.check_if_factory_method(option['arguments']):  
+            if check_if_factory_method(option['arguments']):  
                 return FunctionCode(
                 declaration=TENSOR_METHOD_DECLARATION_UNDERSCORE.substitute(
                     option, static_dispatch_method_body=static_dispatch_method_body),
@@ -1338,7 +1338,7 @@ def create_generic(top_env, declarations):
         
         def gen_namespace_collapsed_function2(option):
             declaration = NATIVE_DISPATCH_DECLARATION_CONST
-            fn_declaration = declaration.substitute(option, type_method_formals= TOUtils.collapse_formals(option['method_formals_with_defaults']))
+            fn_declaration = declaration.substitute(option, type_method_formals= collapse_formals(option['method_formals_with_defaults']))
 
             expanded_native_actuals = option['collapsed_method_actuals'][:]
             expanded_native_actuals.remove('const_cast<Tensor&>(*this)')
@@ -1349,7 +1349,7 @@ def create_generic(top_env, declarations):
             expanded_native_actuals.insert(index, 'layout')
             expanded_native_actuals.insert(index, 'dtype')
 
-            fn_definition = COLLAPSED_METHOD_DEFINITION.substitute(option, collapsed_formals = TOUtils.collapse_formals(option['method_formals']), expanded_native_actuals=expanded_native_actuals)
+            fn_definition = COLLAPSED_METHOD_DEFINITION.substitute(option, collapsed_formals = collapse_formals(option['method_formals']), expanded_native_actuals=expanded_native_actuals)
             return FunctionCode(definition=fn_definition, declaration=fn_declaration)
 
         # Emit #ifdef BUILD_NAMEDTENSOR macros for any code generated here
@@ -1395,7 +1395,7 @@ def create_generic(top_env, declarations):
         # first argument.  Scalar type test will be removed once TH is removed.
         # If you need more complex device guard behavior, you should disable
         # device guard and then manually add the guards you need.
-        dispatch_options = TOUtils.check_tensor_options_in_formals(formals)
+        dispatch_options = check_tensor_options_in_formals(formals)
         guard_tensor = None if dispatch_options else find_dispatch_tensor(formals)
         option['device_guard_declaration'] = device_guard(option, dispatch_options, guard_tensor)
         option['named_guard_declaration'] = named_guard(option, find_tensors(formals),
@@ -1454,7 +1454,7 @@ def create_generic(top_env, declarations):
                 check_namedtensor_enabled(NATIVE_DECLARATION.substitute(option)))
 
         method_of = ['Type']
-        is_factory_method = TOUtils.check_if_factory_method(option['arguments'])
+        is_factory_method = check_if_factory_method(option['arguments'])
 
         if is_method:
             code = gen_tensor_method(option, multidispatch_tensors)
