@@ -20,7 +20,7 @@ from itertools import groupby
 from ..autograd.utils import CodeTemplate, YamlLoader, write
 from ..autograd.gen_autograd import load_aten_declarations
 from ..autograd.gen_autograd import RETURNS_VIEWS_OF_INPUT
-from tools.tensor_options_utils import *
+from ...aten.src.Aten.tensor_options_utils import *
 
 # JIT has a type system of
 # Scalar = int | float | bool # int is the largest int (int64_t),
