@@ -20,7 +20,6 @@ import yaml
 import argparse
 import os
 from copy import deepcopy
-from tensor_options_utils import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--template_dir", default=".", help="where template.h is")
@@ -38,8 +37,10 @@ if args.aten_root:
             args.aten_root))
     sys.path.append(os.path.join(args.aten_root, 'src', 'ATen'))
     from code_template import CodeTemplate as CT
+    from tensor_options_utils import check_if_factory_method
 else:
     from src.ATen.code_template import CodeTemplate as CT
+    from src.ATen.tensor_options_utils import check_if_factory_method
 
 OP_TEMPLATE = CT.from_file(
     os.path.join(args.template_dir, 'aten_op_template.h'))

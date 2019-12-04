@@ -8,13 +8,18 @@ import re
 from .nested_dict import nested_dict
 from .gen_variable_type import should_trace
 from .utils import write
-from .tensor_options_utils import *
 
 try:
     from src.ATen.code_template import CodeTemplate
 except ImportError:
     from tools.shared.module_loader import import_module
     CodeTemplate = import_module('code_template', 'aten/src/ATen/code_template.py').CodeTemplate
+
+try:
+    from src.ATen.tensor_options_utils import *
+except ImportError:
+    from tools.shared.module_loader import import_module
+    TOUtils = import_module('tensor_options_utils', 'aten/src/ATen/tensor_options_utils.py')
 
 # These functions require manual Python bindings or are not exposed to Python
 SKIP_PYTHON_BINDINGS = [
@@ -365,7 +370,7 @@ def create_python_bindings(python_functions, has_self, is_module=False):
 
         inputs = [arg for arg in declaration['arguments'] if not is_output(arg)]
         outputs = [arg for arg in declaration['arguments'] if is_output(arg)]
-        has_tensor_options = check_if_factory_method(declaration['arguments'])
+        has_tensor_options = TOUtils.check_if_factory_method(declaration['arguments'])
 
         def get_type_args(args):
             return [arg for arg in args if arg['simple_type'] == 'Type']
@@ -568,7 +573,7 @@ def create_python_bindings(python_functions, has_self, is_module=False):
         
         if has_tensor_options:
             env['initialize_cuda'] = 'torch::utils::maybe_initialize_cuda(options);'
-            env['dispatch_args'] = collapse_actuals(env['dispatch_args'])
+            env['dispatch_args'] = TOUtils.collapse_actuals(env['dispatch_args'])
             if requires_grad_needed:
                 env['tensor_options'] = "const auto options = TensorOptions().dtype(dtype).device(device).layout(layout).pinned_memory(pin_memory).requires_grad(requires_grad);"
             else:
@@ -677,7 +682,7 @@ def create_python_bindings(python_functions, has_self, is_module=False):
                 has_tensor_input_arg = True
             if arg['simple_type'] == 'Type':
                 has_type_input_arg = True
-            if check_if_factory_method(declaration['arguments']):
+            if TOUtils.check_if_factory_method(declaration['arguments']):
                 has_options_arg = True
             if arg['name'] == 'requires_grad':
                 raise ValueError("argument named requires_grad not supported")
@@ -998,7 +1003,7 @@ def get_python_signature(declaration, include_out):
             continue
         # Skip `TensorOptions` in Python, as it is only used on the C++ side.
         # TODO: [CHECK THIS] : if 2 scalar types are passed - we have an issue
-        if check_if_factory_method(declaration['arguments']):
+        if TOUtils.check_if_factory_method(declaration['arguments']):
             if arg['name'] == 'dtype':
                 continue
             if arg['name'] == 'layout':

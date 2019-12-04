@@ -26,7 +26,12 @@ from __future__ import print_function
 from .utils import CodeTemplate, nested_dict, write, uninplace_api_name
 from .gen_autograd import VIEW_FUNCTIONS
 from .gen_autograd_functions import uses_single_grad
-from .tensor_options_utils import *
+
+try:
+    from src.ATen.tensor_options_utils import *
+except ImportError:
+    from tools.shared.module_loader import import_module
+    TOUtils = import_module('tensor_options_utils', 'aten/src/ATen/tensor_options_utils.py')
 
 # These functions are written manually in templates/VariableType.cpp
 MANUAL_IMPLEMENTATIONS = {
@@ -856,7 +861,7 @@ def emit_body(declaration):
             # in are now Variables.
             # See NOTE [ Treating Variables as non-Variables in type dispatch ] for details.
             if 'namespace' in declaration['method_of']:
-                if check_if_factory_method(declaration['arguments']):
+                if TOUtils.check_if_factory_method(declaration['arguments']):
                     base_type_call = CALL_DISPATCH_VIA_NAMESPACE_UNDERSCORE.substitute(combined)
                 else:
                     base_type_call = CALL_DISPATCH_VIA_NAMESPACE.substitute(combined)

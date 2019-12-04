@@ -6,7 +6,12 @@ import re
 
 from .utils import CodeTemplate, write
 from .gen_variable_type import format_trace
-from .tensor_options_utils import *
+
+try:
+    from src.ATen.tensor_options_utils import *
+except ImportError:
+    from tools.shared.module_loader import import_module
+    TOUtils = import_module('tensor_options_utils', 'aten/src/ATen/tensor_options_utils.py')
 
 # [CHECK THIS] this is a hack. should be fixed later on
 FUNCTION_TEMPLATE_ARANGE = CodeTemplate("""\
@@ -68,7 +73,7 @@ def fully_qualified_type(argument_type):
 def gen_variable_factories(out, declarations, template_path, disable_autograd=False):
     function_definitions = []
     for decl in declarations:
-        has_tensor_options = check_if_factory_method(decl["arguments"])        
+        has_tensor_options = TOUtils.check_if_factory_method(decl["arguments"])        
         is_namespace_fn = 'namespace' in decl['method_of']
         if (has_tensor_options or decl["name"].endswith("_like")) and is_namespace_fn:
             function_definitions.append(
@@ -130,8 +135,8 @@ def process_function(decl, has_tensor_options, disable_autograd):
             pre_record_trace=pre_record_trace, post_record_trace=post_record_trace
         )
     else:
-        uncollapsed_actuals = collapse_actuals2(actuals)
-        collapsed_formals = collapse_formals2(formals)
+        uncollapsed_actuals = TOUtils.collapse_actuals2(actuals)
+        collapsed_formals = TOUtils.collapse_formals2(formals)
         uncollapsed_actuals_nullptr = replace_dtype_nullprt(uncollapsed_actuals)
 
         if decl['name'] == 'arange':

@@ -6,6 +6,7 @@ def check_if_factory_method(args):
     a = any(arg['type'] == 'c10::optional<ScalarType>' for arg in args) and any(arg['type'] == 'c10::optional<Layout>' for arg in args) and any(arg['type'] == 'c10::optional<Device>' for arg in args) and any(arg['type'] == 'c10::optional<bool>' for arg in args)
     c = any(arg['type'] == 'ScalarType' for arg in args) and any(arg['type'] == 'Layout' for arg in args) and any(arg['type'] == 'Device' for arg in args) and any(arg['type'] == 'bool' for arg in args)
     b = any('TensorOptions' in arg['type'] for arg in args)
+
     return a or b or c
 
 def collapse_actuals2(actuals):
@@ -40,18 +41,6 @@ def collapse_actuals(actuals):
 
 def collapse_formals2(formals):
         collapsed = formals[:]
-        if (any(formal == 'c10::optional<ScalarType> dtype' for formal in formals) and
-            any(formal == 'c10::optional<Layout> layout' for formal in formals) and
-            any(formal == 'c10::optional<Device> device' for formal in formals) and 
-            any(formal == 'c10::optional<bool> pin_memory' for formal in formals)):
-            index = formals.index('c10::optional<ScalarType> dtype')
-
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.insert(index, 'const at::TensorOptions & options /*[CHECK THIS] should have ={}*/')
-
         if ((any(formal == 'c10::optional<ScalarType> dtype = c10::nullopt' for formal in formals) or any(formal == 'c10::optional<ScalarType> dtype = at::kLong' for formal in formals)) and
             any(formal == 'c10::optional<Layout> layout = c10::nullopt' for formal in formals) and
             any(formal == 'c10::optional<Device> device = c10::nullopt' for formal in formals) and 
@@ -107,18 +96,6 @@ def collapse_formals(formals):
             collapsed.pop(index)
             collapsed.insert(index, 'const TensorOptions & options={}')
 
-        if (any(formal == 'ScalarType dtype' for formal in formals) and
-            any(formal == 'Layout layout' for formal in formals) and
-            any(formal == 'Device device' for formal in formals) and 
-            (any(formal == 'bool pin_memory' for formal in formals) or any(formal == 'bool pin_memory=false' for formal in formals))):
-            index = formals.index('ScalarType dtype')
-
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.pop(index)
-            collapsed.insert(index, 'const TensorOptions & options')
-        
         return collapsed
 
 def collapse_formals_list(formals):
@@ -139,7 +116,7 @@ def collapse_formals_list(formals):
             collapsed.pop(index)
             collapsed.pop(index)
             collapsed.insert(index, {"annotation" : "None", "dynamic_type": "TensorOptions", "is_nullable": "False", "default": "{}", "kwarg_only": "True", "name": "options", "type": "const TensorOptions &", })
-        
+
         if (any(formal['type'] == 'ScalarType' for formal in collapsed) and 
             any(formal['type'] == 'Layout' for formal in collapsed) and 
             any(formal['type'] == 'Device' for formal in collapsed) and 
