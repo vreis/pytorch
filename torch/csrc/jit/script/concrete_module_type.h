@@ -2,6 +2,7 @@
 
 #include <torch/csrc/jit/pybind_utils.h>
 #include <torch/csrc/jit/script/module.h>
+#include <aten/src/ATen/core/ivalue.h>
 #include <memory>
 #include <string>
 #include <vector>
